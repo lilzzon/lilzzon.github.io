@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const fullPrompt = `${prompt}, стиль: ${style}, ${colorOption}`;
 
   try {
+    console.log("Отправка запроса к API с prompt:", fullPrompt); // Логируем prompt
     const response = await fetch('https://api.deepai.org/api/text2img', {
       method: 'POST',
       headers: {
@@ -58,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const data = await response.json();
     console.log("Ответ от API:", data); // Логируем ответ от API
-    
+
     // Проверяем, есть ли в ответе корректный URL изображения
     if (data.output_url) {
       return data.output_url;
@@ -80,13 +81,16 @@ generateBtn.addEventListener('click', async function() {
     alert('Пожалуйста, опишите вашу идею');
     return;
   }
-  
+
+  console.log("Нажата кнопка 'Сгенерировать'");
+
   loadingIndicator.style.display = 'block';
   resultsGrid.innerHTML = '';
   
   try {
     const imageUrl = await generateTattoo(prompt, style, colorOption);
-    
+    console.log("Получен URL изображения:", imageUrl);
+
     if (imageUrl) {
       const imgElement = document.createElement('img');
       imgElement.src = imageUrl;
@@ -100,7 +104,7 @@ generateBtn.addEventListener('click', async function() {
       downloadButton.download = 'tattoo_image.png'; // Название файла
       downloadButton.textContent = 'Скачать изображение';
       resultsGrid.appendChild(downloadButton);
-      
+
       // Клик по изображению (например, для избранного)
       imgElement.addEventListener('click', function() {
         alert('Изображение сохранено в избранное!');
