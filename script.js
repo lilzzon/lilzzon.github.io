@@ -37,85 +37,88 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Функции для генератора
-  async function generateTattoo(prompt, style, colorOption) {
-  const apiKey = '32698b79-aafd-4d13-b72d-c21e5b62c533';
-  const fullPrompt = `${prompt}, стиль: ${style}, ${colorOption}`;
-
-  try {
-    console.log("Отправка запроса к API с prompt:", fullPrompt); // Логируем prompt
-    const response = await fetch('https://api.deepai.org/api/text2img', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': apiKey
-      },
-      body: JSON.stringify({
-        text: fullPrompt,
-        grid_size: '1',
-        width: '512',
-        height: '512'
-      })
-    });
-
-    const data = await response.json();
-    console.log("Ответ от API:", data); // Логируем ответ от API
-
-    // Проверяем, есть ли в ответе корректный URL изображения
-    if (data.output_url) {
+  async function generateTattoo(prompt) {
+    // В реальном проекте замените на ваш API ключ
+    const apiKey = '32698b79-aafd-4d13-b72d-c21e5b62c533';
+    try {
+      const response = await fetch('https://api.deepai.org/api/text2img', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': apiKey
+        },
+        body: JSON.stringify({
+          text: prompt,
+          grid_size: '1',
+          width: '512',
+          height: '512'
+        })
+      });
+      
+      const data = await response.json();
       return data.output_url;
-    } else {
-      throw new Error("API не вернул ссылку на изображение");
+    } catch (error) {
+      console.error('Ошибка при запросе к API:', error);
+      throw error;
     }
-  } catch (error) {
-    console.error('Ошибка при запросе к API:', error);
-    throw error;
-  }
-}
-
-generateBtn.addEventListener('click', async function() {
-  const prompt = promptInput.value.trim();
-  const style = styleSelect.value;
-  const colorOption = document.getElementById('color-select').value;
-  
-  if (!prompt) {
-    alert('Пожалуйста, опишите вашу идею');
-    return;
   }
 
-  console.log("Нажата кнопка 'Сгенерировать'");
+  function getStyleDescription(style) {
+    const styles = {
+      graphic: "графика, четкие линии, высокий контраст",
+      minimal: "минимализм, простые линии, элегантность",
+      geometric: "геометрические узоры, симметрия, точные линии"
+    };
+    return styles[style] || "";
+  }
 
-  loadingIndicator.style.display = 'block';
-  resultsGrid.innerHTML = '';
-  
-  try {
-    const imageUrl = await generateTattoo(prompt, style, colorOption);
-    console.log("Получен URL изображения:", imageUrl);
+  // Обработчики событий для галереи
+  galleryImages.forEach((img, index) => {
+    img.addEventListener('click', () => openModal(index));
+  });
 
-    if (imageUrl) {
+  closeButton.addEventListener('click', closeModal);
+  prevButton.addEventListener('click', () => navigate(-1));
+  nextButton.addEventListener('click', () => navigate(1));
+
+  // Обработчики событий для генератора
+  generateBtn.addEventListener('click', async function() {
+    const prompt = promptInput.value.trim();
+    const style = styleSelect.value;
+    
+    if (!prompt) {
+      alert('Пожалуйста, опишите вашу идею');
+      return;
+    }
+    
+    loadingIndicator.style.display = 'block';
+    resultsGrid.innerHTML = '';
+    
+    try {
+      const fullPrompt = `${prompt}, ${getStyleDescription(style)}, эскиз татуировки, черно-белое, высокая детализация`;
+      const imageUrl = await generateTattoo(fullPrompt);
+      
       const imgElement = document.createElement('img');
       imgElement.src = imageUrl;
       imgElement.className = 'generated-image';
       imgElement.alt = 'Сгенерированная татуировка';
       resultsGrid.appendChild(imgElement);
-
-      // Кнопка для скачивания изображения
-      const downloadButton = document.createElement('a');
-      downloadButton.href = imageUrl;
-      downloadButton.download = 'tattoo_image.png'; // Название файла
-      downloadButton.textContent = 'Скачать изображение';
-      resultsGrid.appendChild(downloadButton);
-
-      // Клик по изображению (например, для избранного)
+      
       imgElement.addEventListener('click', function() {
+        // Можно добавить функционал сохранения
         alert('Изображение сохранено в избранное!');
       });
-    } else {
-      throw new Error("Не удалось загрузить изображение");
+    } catch (error) {
+      alert('Произошла ошибка при генерации. Пожалуйста, попробуйте ещё раз.');
+    } finally {
+      loadingIndicator.style.display = 'none';
     }
-  } catch (error) {
-    alert('Произошла ошибка при генерации. Пожалуйста, попробуйте ещё раз.');
-    console.error("Ошибка генерации:", error);
-  } finally {
-    loadingIndicator.style.display = 'none';
-  }
+  });
+
+  // Закрытие модального окна при клике вне изображения
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
 });
