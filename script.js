@@ -55,9 +55,16 @@ document.addEventListener('DOMContentLoaded', function() {
         height: '512'
       })
     });
-    
+
     const data = await response.json();
-    return data.output_url; // URL сгенерированного изображения
+    console.log("Ответ от API:", data); // Логируем ответ от API
+    
+    // Проверяем, есть ли в ответе корректный URL изображения
+    if (data.output_url) {
+      return data.output_url;
+    } else {
+      throw new Error("API не вернул ссылку на изображение");
+    }
   } catch (error) {
     console.error('Ошибка при запросе к API:', error);
     throw error;
@@ -80,25 +87,30 @@ generateBtn.addEventListener('click', async function() {
   try {
     const imageUrl = await generateTattoo(prompt, style, colorOption);
     
-    const imgElement = document.createElement('img');
-    imgElement.src = imageUrl;
-    imgElement.className = 'generated-image';
-    imgElement.alt = 'Сгенерированная татуировка';
-    resultsGrid.appendChild(imgElement);
-    
-    // Кнопка для скачивания изображения
-    const downloadButton = document.createElement('a');
-    downloadButton.href = imageUrl;
-    downloadButton.download = 'tattoo_image.png'; // Название файла
-    downloadButton.textContent = 'Скачать изображение';
-    resultsGrid.appendChild(downloadButton);
-    
-    // Клик по изображению (например, для избранного)
-    imgElement.addEventListener('click', function() {
-      alert('Изображение сохранено в избранное!');
-    });
+    if (imageUrl) {
+      const imgElement = document.createElement('img');
+      imgElement.src = imageUrl;
+      imgElement.className = 'generated-image';
+      imgElement.alt = 'Сгенерированная татуировка';
+      resultsGrid.appendChild(imgElement);
+
+      // Кнопка для скачивания изображения
+      const downloadButton = document.createElement('a');
+      downloadButton.href = imageUrl;
+      downloadButton.download = 'tattoo_image.png'; // Название файла
+      downloadButton.textContent = 'Скачать изображение';
+      resultsGrid.appendChild(downloadButton);
+      
+      // Клик по изображению (например, для избранного)
+      imgElement.addEventListener('click', function() {
+        alert('Изображение сохранено в избранное!');
+      });
+    } else {
+      throw new Error("Не удалось загрузить изображение");
+    }
   } catch (error) {
     alert('Произошла ошибка при генерации. Пожалуйста, попробуйте ещё раз.');
+    console.error("Ошибка генерации:", error);
   } finally {
     loadingIndicator.style.display = 'none';
   }
