@@ -1,0 +1,131 @@
+document.addEventListener('DOMContentLoaded', function() {
+  // Элементы галереи
+  const portfolioItems = document.querySelectorAll('.portfolio-item');
+  const viewAllBtn = document.getElementById('viewAllBtn');
+  const modal = document.getElementById('galleryModal');
+  const modalImage = document.getElementById('modalImage');
+  const closeBtn = modal.querySelector('.close');
+  const prevBtn = modal.querySelector('.prev');
+  const nextBtn = modal.querySelector('.next');
+  
+  // Массив с путями к изображениям
+  const images = Array.from(portfolioItems).map(item => 
+    item.querySelector('img').src
+  );
+  
+  let currentIndex = 0;
+
+  // Функция открытия модального окна
+  function openModal(index) {
+    currentIndex = index;
+    modalImage.src = images[currentIndex];
+    modal.classList.add('show');
+    
+    // Блокируем прокрутку страницы
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Функция закрытия модального окна
+  function closeModal() {
+    modal.classList.remove('show');
+    
+    // Восстанавливаем прокрутку страницы
+    document.body.style.overflow = '';
+  }
+
+  // Функция навигации по изображениям
+  function navigate(direction) {
+    currentIndex = (currentIndex + direction + images.length) % images.length;
+    modalImage.src = images[currentIndex];
+  }
+
+  // Обработчики событий для элементов портфолио
+  portfolioItems.forEach((item, index) => {
+    item.addEventListener('click', () => openModal(index));
+  });
+
+  // Обработчик для кнопки "Показать все работы"
+  if (viewAllBtn) {
+    viewAllBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openModal(0);
+    });
+  }
+
+  // Обработчики для модального окна
+  closeBtn.addEventListener('click', closeModal);
+  prevBtn.addEventListener('click', () => navigate(-1));
+  nextBtn.addEventListener('click', () => navigate(1));
+
+  // Закрытие по клику вне изображения
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
+
+  // Навигация с клавиатуры
+  document.addEventListener('keydown', (e) => {
+    if (!modal.classList.contains('show')) return;
+    
+    switch(e.key) {
+      case 'Escape':
+        closeModal();
+        break;
+      case 'ArrowLeft':
+        navigate(-1);
+        break;
+      case 'ArrowRight':
+        navigate(1);
+        break;
+    }
+  });
+});
+
+/* Мобильное меню */
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(26, 26, 26, 0.95);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.mobile-menu-item {
+  color: white;
+  font-size: 24px;
+  margin: 15px 0;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  width: 100%;
+  border-bottom: 1px solid rgba(255, 111, 97, 0.3);
+}
+
+.mobile-menu-item:hover {
+  color: #ff6f61;
+  transform: translateX(10px);
+}
+
+.mobile-menu-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: white;
+  font-size: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mobile-menu-close:hover {
+  color: #ff6f61;
+  transform: rotate(90deg);
+}
