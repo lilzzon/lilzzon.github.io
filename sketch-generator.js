@@ -1,61 +1,57 @@
 document.addEventListener('DOMContentLoaded', function () {
-  // Создание парящих элементов
-  createFloatingElements('sterilization-elements', 5);
-  createFloatingElements('contraindications-elements', 5);
-  createFloatingElements('care-elements', 8);
-  createFloatingElements('recommendations-elements', 4);
+  const form = document.getElementById('generate-sketch-form');
+  const resultContainer = document.getElementById('result-container');
+  const sketchDescription = document.getElementById('sketch-description');
 
-  // Обработчик формы для генерации эскиза
-  document.getElementById('generate-sketch-form').addEventListener('submit', async function (e) {
-    e.preventDefault(); // Отменяем стандартное поведение формы
-
-    const description = document.getElementById('sketch-description').value; // Получаем текстовое описание
-    const resultContainer = document.getElementById('result-container'); // Контейнер для результата
-
-    // Очищаем контейнер
-    resultContainer.innerHTML = '<p>Генерация эскиза...</p>';
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    
+    // Показываем состояние загрузки
+    resultContainer.innerHTML = `
+      <div class="loading-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Генерация эскиза...</p>
+      </div>
+    `;
 
     try {
-      // Формируем данные для отправки
-      const formData = new FormData();
-      formData.append('pipeline_id', 'a17740da-e8a0-4816-876a-74326c5c4cef'); // ID модели
-
-      const params = JSON.stringify({
-        type: "GENERATE",
-        style: "DEFAULT", // Или другой стиль
-        width: 512,
-        height: 512,
-        numImages: 1,
-        generateParams: {
-          query: description
-        }
-      });
-      formData.append('params', new Blob([params], { type: 'application/json' }));
-
-      // Пример запроса к API FusionBrain
-      const response = await fetch('https://api-key.fusionbrain.ai/key/api/v1/pipeline/run', {
+      // 1. Запускаем генерацию
+      const response = await fetch('https://api-key.fusionbrain.ai/key/api/v1/text2image/run', {
         method: 'POST',
         headers: {
           'X-Key': 'Key EF17F2E249F2A0C1548DFA9F4A2EEEAA',
-          'X-Secret': 'Secret F1105D8C2B3B07B586318A6880A9096C'
+          'X-Secret': 'Secret F1105D8C2B3B07B586318A6880A9096C',
+          'Content-Type': 'application/json'
         },
-        body: formData
+        body: JSON.stringify({
+          type: "GENERATE",
+          style: "DEFAULT",
+          width: 512,
+          height: 512,
+          numImages: 1,
+          generateParams: {
+            query: sketchDescription.value
+          }
+        })
       });
 
       if (!response.ok) {
-        const errorDetails = await response.text(); // Получаем текст ошибки
-        console.error('API Error Details:', errorDetails);
-        throw new Error(`Ошибка при генерации эскиза: ${errorDetails}`);
+        throw new Error(`Ошибка API: ${response.status}`);
       }
 
       const data = await response.json();
-      const uuid = data.uuid; // Получаем UUID задачи
+      const uuid = data.uuid;
 
-      // Проверяем статус задачи
+      // 2. Проверяем статус генерации
       let imageUrl;
-      while (true) {
-        const statusResponse = await fetch(`https://api-key.fusionbrain.ai/key/api/v1/pipeline/status/${uuid}`, {
-          method: 'GET',
+      let attempts = 0;
+      const maxAttempts = 30; // Максимум 30 попыток (60 секунд)
+
+      while (attempts < maxAttempts) {
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Ждем 2 секунды
+
+        const statusResponse = await fetch(`https://api-key.fusionbrain.ai/key/api/v1/text2image/status/${uuid}`, {
           headers: {
             'X-Key': 'Key EF17F2E249F2A0C1548DFA9F4A2EEEAA',
             'X-Secret': 'Secret F1105D8C2B3B07B586318A6880A9096C'
@@ -63,61 +59,53 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         const statusData = await statusResponse.json();
+
         if (statusData.status === 'DONE') {
-          imageUrl = statusData.result.files[0];
+          imageUrl = statusData.images?.[0];
           break;
         } else if (statusData.status === 'FAIL') {
-          console.error('Error Details:', statusData.errorDescription);
-          throw new Error(`Ошибка при генерации изображения: ${statusData.errorDescription}`);
+          throw new Error(statusData.error || 'Неизвестная ошибка генерации');
         }
-
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Ждём 2 секунды перед повторной проверкой
       }
 
-      // Проверяем, что изображение существует
       if (!imageUrl) {
-        throw new Error('Сервер не вернул ссылку на изображение.');
+        throw new Error('Превышено время ожидания генерации');
       }
 
-      // Показываем изображение и даём возможность скачать
+      // 3. Показываем результат
       resultContainer.innerHTML = `
-        <img src="${imageUrl}" alt="Сгенерированный эскиз" style="max-width: 100%; margin-top: 20px;" />
-        <a href="${imageUrl}" download="sketch.png" style="display: block; margin-top: 10px;">
-          <button>Скачать эскиз</button>
-        </a>
+        <div class="result-content">
+          <div class="sketch-preview">
+            <img src="data:image/png;base64,${imageUrl}" alt="Сгенерированный эскиз">
+            <div class="sketch-actions">
+              <button class="action-btn download-btn" onclick="downloadImage('${imageUrl}')">
+                <i class="fas fa-download"></i> Скачать
+              </button>
+              <button class="action-btn regenerate-btn" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Перегенерировать
+              </button>
+            </div>
+          </div>
+        </div>
       `;
+
     } catch (error) {
-      console.error('Произошла ошибка:', error);
-      resultContainer.innerHTML = `<p style="color: red;">Произошла ошибка: ${error.message}</p>`;
+      console.error('Ошибка:', error);
+      resultContainer.innerHTML = `
+        <div class="error-state">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>Ошибка: ${error.message}</p>
+          <button onclick="location.reload()">Попробовать снова</button>
+        </div>
+      `;
     }
   });
 
-  // Функция для создания парящих элементов
-  function createFloatingElements(containerId, count = 10) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    for (let i = 0; i < count; i++) {
-      const element = document.createElement('div');
-      element.classList.add('floating-element');
-
-      // Случайные параметры для элементов
-      const size = Math.random() * 100 + 50;
-      const posX = Math.random() * 100;
-      const posY = Math.random() * 100;
-      const delay = Math.random() * 5;
-      const duration = Math.random() * 10 + 10;
-
-      // Применение стилей
-      element.style.width = `${size}px`;
-      element.style.height = `${size}px`;
-      element.style.left = `${posX}%`;
-      element.style.top = `${posY}%`;
-      element.style.animationDelay = `${delay}s`;
-      element.style.animationDuration = `${duration}s`;
-      element.style.opacity = Math.random() * 0.3 + 0.1;
-
-      container.appendChild(element);
-    }
-  }
+  // Функция для скачивания изображения
+  window.downloadImage = function(base64Image) {
+    const link = document.createElement('a');
+    link.href = `data:image/png;base64,${base64Image}`;
+    link.download = 'эскиз.png';
+    link.click();
+  };
 });
