@@ -13,7 +13,7 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
     formData.append('pipeline_id', 'a17740da-e8a0-4816-876a-74326c5c4cef'); // ID модели
     formData.append('params', JSON.stringify({
       type: "GENERATE",
-      style: "DEFAULT", // Стиль "Свой стиль"
+      style: "DEFAULT", // Или другой стиль
       width: 512,
       height: 512,
       numImages: 1,
@@ -27,7 +27,9 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
       'X-Key': 'Key EF17F2E249F2A0C1548DFA9F4A2EEEAA',
       'X-Secret': 'Secret F1105D8C2B3B07B586318A6880A9096C'
     });
-    console.log('FormData:', formData);
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value);
+    }
 
     // Пример запроса к API FusionBrain
     const response = await fetch('https://api-key.fusionbrain.ai/key/api/v1/pipeline/run', {
@@ -40,9 +42,9 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
     });
 
     if (!response.ok) {
-      const errorDetails = await response.json(); // Получаем детали ошибки
+      const errorDetails = await response.text(); // Получаем текст ошибки
       console.error('API Error Details:', errorDetails);
-      throw new Error(`Ошибка при генерации эскиза: ${errorDetails.message || response.statusText}`);
+      throw new Error(`Ошибка при генерации эскиза: ${errorDetails}`);
     }
 
     const data = await response.json();
