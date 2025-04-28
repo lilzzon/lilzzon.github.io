@@ -40,8 +40,9 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
     });
 
     if (!response.ok) {
-      console.error('API Response:', response); // Выводим ошибку в консоль
-      throw new Error('Ошибка при генерации эскиза');
+      const errorDetails = await response.json(); // Получаем детали ошибки
+      console.error('API Error Details:', errorDetails);
+      throw new Error(`Ошибка при генерации эскиза: ${errorDetails.message || response.statusText}`);
     }
 
     const data = await response.json();
@@ -63,7 +64,8 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
         imageUrl = statusData.result.files[0];
         break;
       } else if (statusData.status === 'FAIL') {
-        throw new Error('Ошибка при генерации изображения');
+        console.error('Error Details:', statusData.errorDescription);
+        throw new Error(`Ошибка при генерации изображения: ${statusData.errorDescription}`);
       }
 
       await new Promise(resolve => setTimeout(resolve, 2000)); // Ждём 2 секунды перед повторной проверкой
