@@ -11,7 +11,9 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
     // Формируем данные для отправки
     const formData = new FormData();
     formData.append('pipeline_id', 'a17740da-e8a0-4816-876a-74326c5c4cef'); // ID модели
-    formData.append('params', JSON.stringify({
+
+    // Добавляем поле params с указанием типа данных
+    const params = JSON.stringify({
       type: "GENERATE",
       style: "DEFAULT", // Или другой стиль
       width: 512,
@@ -20,16 +22,14 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
       generateParams: {
         query: description
       }
-    }));
+    });
+    formData.append('params', new Blob([params], { type: 'application/json' }));
 
     // Логирование данных
     console.log('Headers:', {
       'X-Key': 'Key EF17F2E249F2A0C1548DFA9F4A2EEEAA',
       'X-Secret': 'Secret F1105D8C2B3B07B586318A6880A9096C'
     });
-    for (let [key, value] of formData.entries()) {
-      console.log(key, value);
-    }
 
     // Пример запроса к API FusionBrain
     const response = await fetch('https://api-key.fusionbrain.ai/key/api/v1/pipeline/run', {
