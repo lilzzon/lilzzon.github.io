@@ -73,6 +73,11 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
       await new Promise(resolve => setTimeout(resolve, 2000)); // Ждём 2 секунды перед повторной проверкой
     }
 
+    // Проверяем, что изображение существует
+    if (!imageUrl) {
+      throw new Error('Сервер не вернул ссылку на изображение.');
+    }
+
     // Показываем изображение и даём возможность скачать
     resultContainer.innerHTML = `
       <img src="${imageUrl}" alt="Сгенерированный эскиз" style="max-width: 100%; margin-top: 20px;" />
