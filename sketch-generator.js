@@ -12,7 +12,6 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
     const formData = new FormData();
     formData.append('pipeline_id', 'a17740da-e8a0-4816-876a-74326c5c4cef'); // ID модели
 
-    // Добавляем поле params с указанием типа данных
     const params = JSON.stringify({
       type: "GENERATE",
       style: "DEFAULT", // Или другой стиль
@@ -25,11 +24,7 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
     });
     formData.append('params', new Blob([params], { type: 'application/json' }));
 
-    // Логирование данных
-    console.log('Headers:', {
-      'X-Key': 'Key EF17F2E249F2A0C1548DFA9F4A2EEEAA',
-      'X-Secret': 'Secret F1105D8C2B3B07B586318A6880A9096C'
-    });
+    console.log('Отправляем запрос на генерацию...');
 
     // Пример запроса к API FusionBrain
     const response = await fetch('https://api-key.fusionbrain.ai/key/api/v1/pipeline/run', {
@@ -48,11 +43,19 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
     }
 
     const data = await response.json();
-    const uuid = data.uuid; // Получаем UUID задачи
+    const uuid = data.uuid;
+
+    if (!uuid) {
+      throw new Error('Сервер не вернул UUID задачи.');
+    }
+
+    console.log('UUID задачи:', uuid);
 
     // Проверяем статус задачи
     let imageUrl;
-    while (true) {
+    let attempts = 30; // Максимум 30 попыток (60 секунд)
+    while (attempts > 0) {
+      console.log('Проверяем статус задачи...');
       const statusResponse = await fetch(`https://api-key.fusionbrain.ai/key/api/v1/pipeline/status/${uuid}`, {
         method: 'GET',
         headers: {
@@ -70,22 +73,25 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
         throw new Error(`Ошибка при генерации изображения: ${statusData.errorDescription}`);
       }
 
+      attempts--;
       await new Promise(resolve => setTimeout(resolve, 2000)); // Ждём 2 секунды перед повторной проверкой
     }
 
-    // Проверяем, что изображение существует
-    if (!imageUrl) {
-      throw new Error('Сервер не вернул ссылку на изображение.');
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      throw new Error('Не удалось получить изображение после максимального количества попыток.');
     }
+
+    console.log('Изображение успешно получено:', imageUrl);
 
     // Показываем изображение и даём возможность скачать
     resultContainer.innerHTML = `
-      <img src="${imageUrl}" alt="Сгенерированный эскиз" style="max-width: 100%; margin-top: 20px;" />
-      <a href="${imageUrl}" download="sketch.png" style="display: block; margin-top: 10px;">
+      <img src="${encodeURIComponent(imageUrl)}" alt="Сгенерированный эскиз" style="max-width: 100%; margin-top: 20px;" />
+      <a href="${encodeURIComponent(imageUrl)}" download="sketch.png" style="display: block; margin-top: 10px;">
         <button>Скачать эскиз</button>
       </a>
     `;
   } catch (error) {
+    console.error('Произошла ошибка:', error);
     resultContainer.innerHTML = `<p style="color: red;">Произошла ошибка: ${error.message}</p>`;
   }
 });
