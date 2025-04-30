@@ -1,20 +1,29 @@
 document.getElementById('generate-sketch-form').addEventListener('submit', async function (e) {
   e.preventDefault(); // Отменяем стандартное поведение формы
 
-  const sketchDescription = document.getElementById('sketch-description'); // Поле ввода текстового описания
-  const resultContainer = document.getElementById('result-container'); // Контейнер для результата
+  const sketchDescription = document.getElementById('sketch-description');
+  const resultContainer = document.getElementById('result-container');
 
   // Показываем состояние загрузки
-  resultContainer.innerHTML = `
-    <div class="loading-state">
-      <i class="fas fa-spinner fa-spin"></i>
-      <p>Генерация эскиза...</p>
-    </div>
-  `;
+  resultContainer.innerHTML = `<div class="loading-state"><i class="fas fa-spinner fa-spin"></i><p>Проверка доступности сервиса...</p></div>`;
 
   try {
-    // Отправляем запрос через прокси
-    const response = await fetch('https://artworkshop-proxy.onrender.com/proxy/text2image/run', {
+    // Проверяем доступность сервиса
+    const availabilityResponse = await fetch('https://artworkshop-proxy.onrender.com/proxy/check-availability');
+    if (!availabilityResponse.ok) {
+      throw new Error('Не удалось проверить доступность сервиса');
+    }
+
+    const availabilityData = await availabilityResponse.json();
+    if (availabilityData.status !== 'AVAILABLE') {
+      throw new Error('Сервис временно недоступен. Попробуйте позже.');
+    }
+
+    // Показываем состояние генерации
+    resultContainer.innerHTML = `<div class="loading-state"><i class="fas fa-spinner fa-spin"></i><p>Генерация эскиза...</p></div>`;
+
+    // Отправляем запрос на генерацию эскиза
+    const generateResponse = await fetch('https://artworkshop-proxy.onrender.com/proxy/text2image/run', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -31,12 +40,12 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
       })
     });
 
-    if (!response.ok) {
+    if (!generateResponse.ok) {
       throw new Error('Ошибка при генерации эскиза');
     }
 
-    const data = await response.json();
-    const uuid = data.uuid; // Получаем UUID задачи
+    const generateData = await generateResponse.json();
+    const uuid = generateData.uuid; // Получаем UUID задачи
 
     // Проверяем статус задачи
     let imageUrl;
@@ -97,11 +106,3 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
     `;
   }
 });
-
-// Функция для скачивания изображения
-window.downloadImage = function(base64Image) {
-  const link = document.createElement('a');
-  link.href = base64Image.startsWith('data:image') ? base64Image : `data:image/png;base64,${base64Image}`;
-  link.download = 'эскиз.png';
-  link.click();
-};
