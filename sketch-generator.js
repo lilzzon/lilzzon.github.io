@@ -1,28 +1,29 @@
 document.getElementById('generate-sketch-form').addEventListener('submit', async function (e) {
   e.preventDefault(); // Отменяем стандартное поведение формы
 
-  const sketchDescription = document.getElementById('sketch-description');
+  const sketchDescription = document.getElementById('sketch-description').value;
   const resultContainer = document.getElementById('result-container');
 
   // Показываем состояние загрузки
-  resultContainer.innerHTML = `<div class="loading-state"><i class="fas fa-spinner fa-spin"></i><p>Проверка доступности сервиса...</p></div>`;
+  resultContainer.innerHTML = `<div class="loading-state"><i class="fas fa-spinner fa-spin"></i><p>Подготовка к генерации...</p></div>`;
 
   try {
-    // Проверяем доступность сервиса
-    const availabilityResponse = await fetch('https://artworkshop-proxy.onrender.com/proxy/check-availability');
-    if (!availabilityResponse.ok) {
-      throw new Error('Не удалось проверить доступность сервиса');
+    // 1. Получаем pipeline ID
+    const pipelinesResponse = await fetch('https://artworkshop-proxy.onrender.com/proxy/get-pipelines');
+    if (!pipelinesResponse.ok) {
+      throw new Error('Не удалось получить список моделей');
     }
-
-    const availabilityData = await availabilityResponse.json();
-    if (availabilityData.status !== 'AVAILABLE') {
-      throw new Error('Сервис временно недоступен. Попробуйте позже.');
+    
+    const pipelinesData = await pipelinesResponse.json();
+    if (!pipelinesData || pipelinesData.length === 0) {
+      throw new Error('Нет доступных моделей для генерации');
     }
+    
+    const pipelineId = pipelinesData[0].id;
 
-    // Показываем состояние генерации
+    // 2. Отправляем запрос на генерацию
     resultContainer.innerHTML = `<div class="loading-state"><i class="fas fa-spinner fa-spin"></i><p>Генерация эскиза...</p></div>`;
 
-    // Отправляем запрос на генерацию эскиза
     const generateResponse = await fetch('https://artworkshop-proxy.onrender.com/proxy/text2image/run', {
       method: 'POST',
       headers: {
@@ -31,61 +32,64 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
       body: JSON.stringify({
         type: "GENERATE",
         style: "DEFAULT",
-        width: 512,
-        height: 512,
+        width: 1024,
+        height: 1024,
         numImages: 1,
         generateParams: {
-          query: sketchDescription.value
+          query: sketchDescription
         }
       })
     });
 
     if (!generateResponse.ok) {
-      throw new Error('Ошибка при генерации эскиза');
+      const errorData = await generateResponse.json();
+      throw new Error(errorData.error || 'Ошибка при генерации эскиза');
     }
 
     const generateData = await generateResponse.json();
-    const uuid = generateData.uuid; // Получаем UUID задачи
+    const uuid = generateData.uuid;
 
-    // Проверяем статус задачи
-    let imageUrl;
+    // 3. Проверяем статус задачи
+    let resultData;
     let attempts = 0;
-    const maxAttempts = 30; // Максимум 30 попыток (60 секунд)
+    const maxAttempts = 15; // 15 попыток (30 секунд с интервалом 2 секунды)
+    const delay = 2000;
 
     while (attempts < maxAttempts) {
       attempts++;
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Ждем 2 секунды
+      await new Promise(resolve => setTimeout(resolve, delay));
 
-      const statusResponse = await fetch(`https://artworkshop-proxy.onrender.com/proxy/text2image/status/${uuid}`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const statusResponse = await fetch(`https://artworkshop-proxy.onrender.com/proxy/text2image/status/${uuid}`);
+      
+      if (!statusResponse.ok) {
+        continue; // Пробуем снова при ошибке запроса
+      }
 
-      const statusData = await statusResponse.json();
+      resultData = await statusResponse.json();
 
-      if (statusData.status === 'DONE') {
-        if (!statusData.images || statusData.images.length === 0) {
-          throw new Error('Не удалось получить изображение');
-        }
-        imageUrl = statusData.images[0];
+      if (resultData.status === 'DONE') {
         break;
-      } else if (statusData.status === 'FAIL') {
-        throw new Error(statusData.error || 'Неизвестная ошибка генерации');
+      } else if (resultData.status === 'FAIL') {
+        throw new Error(resultData.errorDescription || 'Ошибка генерации');
       }
     }
 
-    if (!imageUrl) {
+    if (!resultData || resultData.status !== 'DONE') {
       throw new Error('Превышено время ожидания генерации');
     }
 
-    // Показываем результат
+    if (!resultData.result || !resultData.result.files || resultData.result.files.length === 0) {
+      throw new Error('Не удалось получить изображение');
+    }
+
+    // 4. Отображаем результат
+    const base64Image = resultData.result.files[0];
     resultContainer.innerHTML = `
       <div class="result-content">
         <div class="sketch-preview">
-          <img src="${imageUrl}" alt="Сгенерированный эскиз">
+          <img src="data:image/png;base64,${base64Image}" alt="Сгенерированный эскиз">
           <div class="sketch-actions">
-            <button class="action-btn download-btn" onclick="downloadImage('${imageUrl}')">
+            <button class="action-btn download-btn" onclick="downloadImage('data:image/png;base64,${base64Image}')">
               <i class="fas fa-download"></i> Скачать
             </button>
             <button class="action-btn regenerate-btn" onclick="location.reload()">
@@ -106,3 +110,13 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
     `;
   }
 });
+
+// Функция для скачивания изображения
+function downloadImage(base64Data) {
+  const link = document.createElement('a');
+  link.href = base64Data;
+  link.download = 'generated-sketch.png';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
