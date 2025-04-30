@@ -11,14 +11,16 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
     // 1. Получаем pipeline ID
     const pipelinesResponse = await fetch('https://artworkshop-proxy.onrender.com/proxy/get-pipelines');
     if (!pipelinesResponse.ok) {
+      const errorData = await pipelinesResponse.json();
+      console.error('Ошибка при получении pipelines:', errorData);
       throw new Error('Не удалось получить список моделей');
     }
-    
+
     const pipelinesData = await pipelinesResponse.json();
     if (!pipelinesData || pipelinesData.length === 0) {
       throw new Error('Нет доступных моделей для генерации');
     }
-    
+
     const pipelineId = pipelinesData[0].id;
 
     // 2. Отправляем запрос на генерацию
@@ -43,6 +45,7 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
 
     if (!generateResponse.ok) {
       const errorData = await generateResponse.json();
+      console.error('Ошибка при генерации:', errorData);
       throw new Error(errorData.error || 'Ошибка при генерации эскиза');
     }
 
@@ -110,13 +113,3 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
     `;
   }
 });
-
-// Функция для скачивания изображения
-function downloadImage(base64Data) {
-  const link = document.createElement('a');
-  link.href = base64Data;
-  link.download = 'generated-sketch.png';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
