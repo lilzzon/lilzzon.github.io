@@ -14,7 +14,7 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
 
   try {
     // Отправляем запрос через прокси
-    const response = await fetch('https://your-render-url.onrender.com/proxy/text2image/run', {
+    const response = await fetch('https://artworkshop-proxy.onrender.com/proxy/text2image/run', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -47,7 +47,7 @@ document.getElementById('generate-sketch-form').addEventListener('submit', async
       attempts++;
       await new Promise(resolve => setTimeout(resolve, 2000)); // Ждем 2 секунды
 
-      const statusResponse = await fetch(`https://your-render-url.onrender.com/proxy/text2image/status/${uuid}`, {
+      const statusResponse = await fetch(`https://artworkshop-proxy.onrender.com/proxy/text2image/status/${uuid}`, {
         headers: {
           'Content-Type': 'application/json'
         }
