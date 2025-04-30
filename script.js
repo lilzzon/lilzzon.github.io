@@ -1,4 +1,33 @@
-// Основной JavaScript код
+// Определение функции в глобальной области
+function createFloatingElements(containerId, count = 5) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  for (let i = 0; i < count; i++) {
+    const element = document.createElement('div');
+    element.classList.add('floating-element');
+
+    // Случайные параметры для элементов
+    const size = Math.random() * 100 + 50;
+    const posX = Math.random() * 100;
+    const posY = Math.random() * 100;
+    const delay = Math.random() * 5;
+    const duration = Math.random() * 10 + 10;
+
+    // Применение стилей
+    element.style.width = `${size}px`;
+    element.style.height = `${size}px`;
+    element.style.left = `${posX}%`;
+    element.style.top = `${posY}%`;
+    element.style.animationDelay = `${delay}s`;
+    element.style.animationDuration = `${duration}s`;
+    element.style.opacity = Math.random() * 0.3 + 0.1;
+
+    container.appendChild(element);
+  }
+}
+
+// Инициализация после загрузки DOM
 document.addEventListener('DOMContentLoaded', function () {
   // ========== ГАЛЕРЕЯ ПОРТФОЛИО ==========
   const portfolioItems = document.querySelectorAll('.portfolio-item');
@@ -135,41 +164,6 @@ document.addEventListener('DOMContentLoaded', function () {
     observer.observe(section);
   });
 
-  // ========== СОЗДАНИЕ ПАРЯЩИХ ЭЛЕМЕНТОВ ==========
-  function createFloatingElements(containerId, count = 5) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    for (let i = 0; i < count; i++) {
-      const element = document.createElement('div');
-      element.classList.add('floating-element');
-
-      // Случайные параметры для элементов
-      const size = Math.random() * 100 + 50;
-      const posX = Math.random() * 100;
-      const posY = Math.random() * 100;
-      const delay = Math.random() * 5;
-      const duration = Math.random() * 10 + 10;
-
-      // Применение стилей
-      element.style.width = `${size}px`;
-      element.style.height = `${size}px`;
-      element.style.left = `${posX}%`;
-      element.style.top = `${posY}%`;
-      element.style.animationDelay = `${delay}s`;
-      element.style.animationDuration = `${duration}s`;
-      element.style.opacity = Math.random() * 0.3 + 0.1;
-
-      container.appendChild(element);
-    }
-  }
-
-  // Создание элементов для разных разделов
-  createFloatingElements('sterilization-elements', 5);
-  createFloatingElements('contraindications-elements', 5);
-  createFloatingElements('care-elements', 8);
-  createFloatingElements('recommendations-elements', 4);
-
   // ========== ЭФФЕКТ ЧАСТИЦ ==========
   const particlesContainer = document.getElementById('particles');
   if (particlesContainer) {
@@ -196,45 +190,16 @@ document.addEventListener('DOMContentLoaded', function () {
   setTimeout(() => {
     title.classList.add('animate__animated', 'animate__pulse');
   }, 1000);
+
+  // Создание парящих элементов для разных разделов
+  createFloatingElements('sterilization-elements', 5);
+  createFloatingElements('contraindications-elements', 5);
+  createFloatingElements('care-elements', 8);
+  createFloatingElements('recommendations-elements', 4);
+
+  // Создание парящих элементов для этапов процедуры
+  createFloatingElements('procedure-steps-elements', 6);
+
+  // Создание парящих элементов для раздела "Отзывы"
+  createFloatingElements('reviews-elements', 6);
 });
-
-// Модальное окно для изображений сертификата и карты
-const certificateModal = document.createElement('div');
-certificateModal.classList.add('modal');
-certificateModal.innerHTML = `
-  <span class="close">&times;</span>
-  <img class="modal-content" id="certificate-modal-image" alt="Сертификат или карта">
-  <button class="modal-button prev"><i class="fas fa-chevron-left"></i></button>
-  <button class="modal-button next"><i class="fas fa-chevron-right"></i></button>
-`;
-
-document.body.appendChild(certificateModal);
-const certificateModalImage = certificateModal.querySelector('#certificate-modal-image');
-const certificateCloseButton = certificateModal.querySelector('.close');
-let certificateImages = [];
-let currentCertificateIndex = 0;
-
-function openCertificateModal(images, index) {
-  certificateImages = images;
-  currentCertificateIndex = index;
-  certificateModalImage.setAttribute('src', certificateImages[currentCertificateIndex]);
-  certificateModal.classList.add('show');
-}
-
-function closeCertificateModal() {
-  certificateModal.classList.remove('show');
-}
-
-certificateCloseButton.addEventListener('click', closeCertificateModal);
-
-certificateModal.addEventListener('click', (e) => {
-  if (e.target === certificateModal) {
-    closeCertificateModal();
-  }
-});
-
-// Создание парящих элементов для этапов процедуры
-createFloatingElements('procedure-steps-elements', 6);
-
-// Создание парящих элементов для раздела "Отзывы"
-createFloatingElements('reviews-elements', 6);
